@@ -39,6 +39,9 @@ class ViewController: UIViewController {
   private let venueCellIdentifier = "VenueCell"
 
   lazy var coreDataStack = CoreDataStack(modelName: "BubbleTeaFinder")
+  var fetchRequest: NSFetchRequest<Venue>?
+  var venues: [Venue] = []
+  
 
   // MARK: - IBOutlets
   @IBOutlet weak var tableView: UITableView!
@@ -48,6 +51,21 @@ class ViewController: UIViewController {
     super.viewDidLoad()
 
     importJSONSeedDataIfNeeded()
+    
+    // загрузка с помощью образца запроса, в отличие от других способов получения запроса, для этого необходима managedObjectModel, чтобы далее использовать fetchRequestTemplate
+    guard let model =
+      coreDataStack.managedContext
+        .persistentStoreCoordinator?.managedObjectModel,
+      // Параметр NSManagedObjectModel fetchRequestTemplate(forName:) принимает строковый идентификатор. Этот идентификатор должен точно соответствовать имени, выбранному вами для запроса на извлечение в редакторе моделей.
+      let fetchRequest = model
+        .fetchRequestTemplate(forName: "FetchRequest")
+        as? NSFetchRequest<Venue> else {
+    return
+    }
+    self.fetchRequest = fetchRequest
+    // проверяет и создает запрос
+    fetchAndReload()
+
   }
 
   // MARK: - Navigation
@@ -63,16 +81,32 @@ extension ViewController {
   }
 }
 
+// MARK: - Helper methods
+extension ViewController {
+  func fetchAndReload() {
+    guard let fetchRequest = fetchRequest else {
+      return
+    }
+    do { venues =
+      try coreDataStack.managedContext.fetch(fetchRequest)
+      tableView.reloadData()
+    } catch let error as NSError {
+      print("Could not fetch \(error), \(error.userInfo)")
+    }
+  }
+}
+
 // MARK: - UITableViewDataSource
 extension ViewController: UITableViewDataSource {
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    10
+    venues.count
   }
 
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(withIdentifier: venueCellIdentifier, for: indexPath)
-    cell.textLabel?.text = "Bubble Tea Venue"
-    cell.detailTextLabel?.text = "Price Info"
+    let venue = venues[indexPath.row]
+    cell.textLabel?.text = venue.name
+    cell.detailTextLabel?.text = venue.priceInfo?.priceCategory
     return cell
   }
 }

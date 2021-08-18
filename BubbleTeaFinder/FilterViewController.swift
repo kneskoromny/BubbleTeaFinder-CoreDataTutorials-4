@@ -31,6 +31,7 @@
 /// THE SOFTWARE.
 
 import UIKit
+import CoreData
 
 class FilterViewController: UITableViewController {
   @IBOutlet weak var firstPriceCategoryLabel: UILabel!
@@ -42,6 +43,9 @@ class FilterViewController: UITableViewController {
   @IBOutlet weak var cheapVenueCell: UITableViewCell!
   @IBOutlet weak var moderateVenueCell: UITableViewCell!
   @IBOutlet weak var expensiveVenueCell: UITableViewCell!
+  
+  // MARK: - Properties
+  var coreDataStack: CoreDataStack!
 
   // MARK: - Most popular section
   @IBOutlet weak var offeringDealCell: UITableViewCell!
