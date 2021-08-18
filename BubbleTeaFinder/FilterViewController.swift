@@ -46,6 +46,19 @@ class FilterViewController: UITableViewController {
   
   // MARK: - Properties
   var coreDataStack: CoreDataStack!
+  // предикат для ключа ценовой категории
+  lazy var cheapVenuePredicate: NSPredicate = {
+    return NSPredicate(format: "%K == %@",
+      #keyPath(Venue.priceInfo.priceCategory), "$")
+  }()
+  lazy var moderateVenuePredicate: NSPredicate = {
+    return NSPredicate(format: "%K == %@",
+      #keyPath(Venue.priceInfo.priceCategory), "$$")
+  }()
+  lazy var expensiveVenuePredicate: NSPredicate = {
+    return NSPredicate(format: "%K == %@",
+      #keyPath(Venue.priceInfo.priceCategory), "$$$")
+  }()
 
   // MARK: - Most popular section
   @IBOutlet weak var offeringDealCell: UITableViewCell!
@@ -61,6 +74,10 @@ class FilterViewController: UITableViewController {
   // MARK: - View Life Cycle
   override func viewDidLoad() {
     super.viewDidLoad()
+    // использует fetchRequest для запроса количества объектов
+    populateCheapVenueCountLabel()
+    populateModerateVenueCountLabel()
+    populateExpensiveVenueCountLabel()
   }
 }
 
@@ -76,4 +93,57 @@ extension FilterViewController {
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     // Add code here
   }
+}
+// MARK: - Helper methods
+extension FilterViewController {
+  func populateCheapVenueCountLabel() {
+    let fetchRequest =
+      // тк необходим countResultType тип запроса должен быть NSNumber
+      NSFetchRequest<NSNumber>(entityName: "Venue")
+    fetchRequest.resultType = .countResultType
+    fetchRequest.predicate = cheapVenuePredicate
+    do {
+      // в массиве NSNumber содержится единственное число - кол-во объектов согласно запросу
+      let countResult =
+        try coreDataStack.managedContext.fetch(fetchRequest)
+      // получаем это число
+      let count = countResult.first?.intValue ?? 0
+      // крутая запись, получаем стринг в заисимости от значения count
+      let pluralized = count == 1 ? "place" : "places"
+      firstPriceCategoryLabel.text =
+        "\(count) bubble tea \(pluralized)"
+    } catch let error as NSError {
+      print("count not fetched \(error), \(error.userInfo)")
+    }
+  }
+  func populateModerateVenueCountLabel() {
+    let fetchRequest =
+      NSFetchRequest<NSNumber>(entityName: "Venue")
+    fetchRequest.resultType = .countResultType
+    fetchRequest.predicate = moderateVenuePredicate
+    do {
+      let countResult =
+        try coreDataStack.managedContext.fetch(fetchRequest)
+      let count = countResult.first?.intValue ?? 0
+      let pluralized = count == 1 ? "place" : "places"
+      secondPriceCategoryLabel.text =
+        "\(count) bubble tea \(pluralized)"
+    } catch let error as NSError {
+      print("count not fetched \(error), \(error.userInfo)")
+    }
+  }
+  // способ сделать проще, без указания типа запроса
+  func populateExpensiveVenueCountLabel() {
+    let fetchRequest: NSFetchRequest<Venue> = Venue.fetchRequest()
+    fetchRequest.predicate = expensiveVenuePredicate
+    do {
+      // возвращаемое значение count - Int, можно сразу подставить в лейбл
+      let count =
+        try coreDataStack.managedContext.count(for: fetchRequest)
+      let pluralized = count == 1 ? "place" : "places"
+      thirdPriceCategoryLabel.text =
+        "\(count) bubble tea \(pluralized)"
+    } catch let error as NSError {
+      print("count not fetched \(error), \(error.userInfo)")
+  } }
 }
