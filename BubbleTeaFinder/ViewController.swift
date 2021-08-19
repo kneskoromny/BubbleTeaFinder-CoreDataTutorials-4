@@ -37,47 +37,52 @@ class ViewController: UIViewController {
   // MARK: - Properties
   private let filterViewControllerSegueIdentifier = "toFilterViewController"
   private let venueCellIdentifier = "VenueCell"
-
+  
   lazy var coreDataStack = CoreDataStack(modelName: "BubbleTeaFinder")
   var fetchRequest: NSFetchRequest<Venue>?
   var venues: [Venue] = []
   
-
+  
   // MARK: - IBOutlets
   @IBOutlet weak var tableView: UITableView!
-
+  
   // MARK: - View Life Cycle
   override func viewDidLoad() {
     super.viewDidLoad()
-
-    importJSONSeedDataIfNeeded()
     
+    importJSONSeedDataIfNeeded()
+    /*
     // загрузка с помощью образца запроса, в отличие от других способов получения запроса, для этого необходима managedObjectModel, чтобы далее использовать fetchRequestTemplate
+     если использовать сортировки и фильтры в run time тип запроса нужно менять иначе краш
     guard let model =
-      coreDataStack.managedContext
-        .persistentStoreCoordinator?.managedObjectModel,
-      // Параметр NSManagedObjectModel fetchRequestTemplate(forName:) принимает строковый идентификатор. Этот идентификатор должен точно соответствовать имени, выбранному вами для запроса на извлечение в редакторе моделей.
-      let fetchRequest = model
-        .fetchRequestTemplate(forName: "FetchRequest")
-        as? NSFetchRequest<Venue> else {
-    return
+            coreDataStack.managedContext
+            .persistentStoreCoordinator?.managedObjectModel,
+          // Параметр NSManagedObjectModel fetchRequestTemplate(forName:) принимает строковый идентификатор. Этот идентификатор должен точно соответствовать имени, выбранному вами для запроса на извлечение в редакторе моделей.
+          let fetchRequest = model
+            .fetchRequestTemplate(forName: "FetchRequest")
+            as? NSFetchRequest<Venue> else {
+      return
     }
     self.fetchRequest = fetchRequest
+ */
+    // стандартный тип запроса для использования предикатов и сортировки в run time
+    fetchRequest = Venue.fetchRequest()
     // проверяет и создает запрос
     fetchAndReload()
-
+    
   }
-
+  
   // MARK: - Navigation
   override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
     guard segue.identifier == filterViewControllerSegueIdentifier,
-        let navController = segue.destination
-          as? UINavigationController,
-        let filterVC = navController.topViewController
-          as? FilterViewController else {
-            return
+          let navController = segue.destination
+            as? UINavigationController,
+          let filterVC = navController.topViewController
+            as? FilterViewController else {
+      return
     }
-      filterVC.coreDataStack = coreDataStack
+    filterVC.coreDataStack = coreDataStack
+    filterVC.delegate = self
   }
 }
 
@@ -107,7 +112,7 @@ extension ViewController: UITableViewDataSource {
   func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
     venues.count
   }
-
+  
   func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
     let cell = tableView.dequeueReusableCell(withIdentifier: venueCellIdentifier, for: indexPath)
     let venue = venues[indexPath.row]
@@ -121,7 +126,7 @@ extension ViewController: UITableViewDataSource {
 extension ViewController {
   func importJSONSeedDataIfNeeded() {
     let fetchRequest = NSFetchRequest<Venue>(entityName: "Venue")
-
+    
     do {
       let venueCount = try coreDataStack.managedContext.count(for: fetchRequest)
       guard venueCount == 0 else { return }
@@ -144,7 +149,7 @@ extension ViewController {
     else {
       return
     }
-
+    
     for jsonDictionary in jsonArray {
       // парсим вложенные словари
       guard
@@ -169,16 +174,16 @@ extension ViewController {
       location.state = locationDict["state"] as? String
       location.zipcode = locationDict["postalCode"] as? String
       location.distance = locationDict["distance"] as? Float ?? 0
-
+      
       let category = Category(context: coreDataStack.managedContext)
-
+      
       let priceInfo = PriceInfo(context: coreDataStack.managedContext)
       priceInfo.priceCategory = priceDict["currency"] as? String
-
+      
       let stats = Stats(context: coreDataStack.managedContext)
       stats.checkinsCount = statsDict["checkinsCount"] as? Int32 ?? 0
       stats.tipCount = statsDict["tipCount"] as? Int32 ?? 0
-
+      
       let venue = Venue(context: coreDataStack.managedContext)
       venue.name = venueName
       venue.phone = venuePhone
@@ -188,8 +193,29 @@ extension ViewController {
       venue.priceInfo = priceInfo
       venue.stats = stats
     }
-
+    
     // сохраняем контекст
     coreDataStack.saveContext()
+  }
+}
+// MARK: - FilterViewControllerDelegate
+extension ViewController: FilterViewControllerDelegate {
+  func filterViewController(
+    filter: FilterViewController,
+    didSelectPredicate predicate: NSPredicate?,
+    sortDescriptor: NSSortDescriptor?) {
+    
+    guard let fetchRequest = fetchRequest else {
+      return
+    }
+    // сбрасываем значения предиката и сортировки
+    fetchRequest.predicate = nil
+    fetchRequest.sortDescriptors = nil
+    // устанавливаем новые значения, переданные в метод
+    fetchRequest.predicate = predicate
+    if let sort = sortDescriptor {
+      fetchRequest.sortDescriptors = [sort]
+}
+    fetchAndReload()
   }
 }

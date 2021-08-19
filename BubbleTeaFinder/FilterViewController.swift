@@ -33,6 +33,14 @@
 import UIKit
 import CoreData
 
+// протокол определяет метод делегирования, который уведомит делегата, когда пользователь выберет новую комбинацию сортировки/фильтра.
+protocol FilterViewControllerDelegate: AnyObject {
+  func filterViewController(
+    filter: FilterViewController,
+    didSelectPredicate predicate: NSPredicate?,
+    sortDescriptor: NSSortDescriptor?)
+}
+
 class FilterViewController: UITableViewController {
   @IBOutlet weak var firstPriceCategoryLabel: UILabel!
   @IBOutlet weak var secondPriceCategoryLabel: UILabel!
@@ -46,6 +54,13 @@ class FilterViewController: UITableViewController {
   
   // MARK: - Properties
   var coreDataStack: CoreDataStack!
+  // содержит ссылку на делегат
+  weak var delegate: FilterViewControllerDelegate?
+  // ссылка на дескриптор
+  var selectedSortDescriptor: NSSortDescriptor?
+  // ссылка на предикат
+  var selectedPredicate: NSPredicate?
+  
   // предикат для ключа ценовой категории
   lazy var cheapVenuePredicate: NSPredicate = {
     return NSPredicate(format: "%K == %@",
@@ -85,14 +100,33 @@ class FilterViewController: UITableViewController {
 // MARK: - IBActions
 extension FilterViewController {
   @IBAction func search(_ sender: UIBarButtonItem) {
-    // Add code here
+    delegate?.filterViewController(
+      filter: self,
+      didSelectPredicate: selectedPredicate,
+      sortDescriptor: selectedSortDescriptor
+    )
+    dismiss(animated: true)
   }
 }
 
 // MARK: - UITableViewDelegate
 extension FilterViewController {
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-    // Add code here
+    guard let cell = tableView.cellForRow(at: indexPath) else {
+      return
+  }
+    // Price section
+    // прм нажатии на конкретную ячейку задаем соотв значение selectedPredicate
+    switch cell {
+    case cheapVenueCell:
+      selectedPredicate = cheapVenuePredicate
+    case moderateVenueCell:
+      selectedPredicate = moderateVenuePredicate
+    case expensiveVenueCell:
+      selectedPredicate = expensiveVenuePredicate
+    default: break
+    }
+    cell.accessoryType = .checkmark
   }
 }
 // MARK: - Helper methods
@@ -187,3 +221,4 @@ extension FilterViewController {
     }
   }
 }
+
