@@ -78,6 +78,7 @@ class FilterViewController: UITableViewController {
     populateCheapVenueCountLabel()
     populateModerateVenueCountLabel()
     populateExpensiveVenueCountLabel()
+    populateDealsCountLabel()
   }
 }
 
@@ -145,5 +146,44 @@ extension FilterViewController {
         "\(count) bubble tea \(pluralized)"
     } catch let error as NSError {
       print("count not fetched \(error), \(error.userInfo)")
-  } }
+    }
+  }
+  // считает сумму атрибутов Venue.specialCount для всех экземпляров, не создавая массив и не проходя по нему циклом
+  func populateDealsCountLabel() {
+  // запрос загрузки по имени сущности с возвращаемым типом данных - массив NSDictionary
+    let fetchRequest =
+      NSFetchRequest<NSDictionary>(entityName: "Venue")
+    // указываем тип результата
+    fetchRequest.resultType = .dictionaryResultType
+  // создаем экземпляр NSExpressionDescription для запроса суммы
+    let sumExpressionDesc = NSExpressionDescription()
+    // даем имя, чтобы можно было прочитать его результат из словаря результатов
+    sumExpressionDesc.name = "sumDeals"
+  // создаем аргумент для подсчета по ключу Venue.specialCount
+    let specialCountExp =
+      NSExpression(forKeyPath: #keyPath(Venue.specialCount))
+    // указываем тип выражения - сумма, какой аргумент считать - specialCountExp
+    sumExpressionDesc.expression =
+      NSExpression(forFunction: "sum:",
+                   arguments: [specialCountExp])
+    // задаем тип возвращаемого значения - Int32
+    sumExpressionDesc.expressionResultType =
+      .integer32AttributeType
+  // в свойство начального запроса ставим созданный запрос суммы
+    fetchRequest.propertiesToFetch = [sumExpressionDesc]
+  // выполняем запрос
+    do {
+      let results =
+        try coreDataStack.managedContext.fetch(fetchRequest)
+      // возвращаемое значение массив, получаем первый элемент из него
+      let resultDict = results.first
+      // вытаскиваем значение из словаря по ключу и кастим до Int
+      let numDeals = resultDict?["sumDeals"] as? Int ?? 0
+      // меняем окончания в зависимости от числа сделок
+      let pluralized = numDeals == 1 ?  "deal" : "deals"
+      numDealsLabel.text = "\(numDeals) \(pluralized)"
+    } catch let error as NSError {
+      print("count not fetched \(error), \(error.userInfo)")
+    }
+  }
 }
