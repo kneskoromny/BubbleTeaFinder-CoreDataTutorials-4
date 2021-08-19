@@ -61,7 +61,7 @@ class FilterViewController: UITableViewController {
   // ссылка на предикат
   var selectedPredicate: NSPredicate?
   
-  // предикат для ключа ценовой категории
+  // предикаты для ключа ценовой категории
   lazy var cheapVenuePredicate: NSPredicate = {
     return NSPredicate(format: "%K == %@",
       #keyPath(Venue.priceInfo.priceCategory), "$")
@@ -73,6 +73,21 @@ class FilterViewController: UITableViewController {
   lazy var expensiveVenuePredicate: NSPredicate = {
     return NSPredicate(format: "%K == %@",
       #keyPath(Venue.priceInfo.priceCategory), "$$$")
+  }()
+  // предикат для показа мест с одной и более продажами
+  lazy var offeringDealPredicate: NSPredicate = {
+    return NSPredicate(format: "%K > 0",
+      #keyPath(Venue.specialCount))
+  }()
+  // предикат для показа мест с дистанцией 500 и менее метров
+  lazy var walkingDistancePredicate: NSPredicate = {
+    return NSPredicate(format: "%K < 500",
+      #keyPath(Venue.location.distance))
+  }()
+  // предикат для мест с одним и более отзывом
+  lazy var hasUserTipsPredicate: NSPredicate = {
+    return NSPredicate(format: "%K > 0",
+      #keyPath(Venue.stats.tipCount))
   }()
 
   // MARK: - Most popular section
@@ -115,16 +130,26 @@ extension FilterViewController {
     guard let cell = tableView.cellForRow(at: indexPath) else {
       return
   }
-    // Price section
-    // прм нажатии на конкретную ячейку задаем соотв значение selectedPredicate
+    
     switch cell {
+    // Price section
+    // при нажатии на конкретную ячейку задаем соотв значение selectedPredicate
     case cheapVenueCell:
       selectedPredicate = cheapVenuePredicate
     case moderateVenueCell:
       selectedPredicate = moderateVenuePredicate
     case expensiveVenueCell:
       selectedPredicate = expensiveVenuePredicate
-    default: break
+      
+    // Most Popular section
+     case offeringDealCell:
+       selectedPredicate = offeringDealPredicate
+     case walkingDistanceCell:
+       selectedPredicate = walkingDistancePredicate
+     case userTipsCell:
+       selectedPredicate = hasUserTipsPredicate
+     default: break
+     
     }
     cell.accessoryType = .checkmark
   }
