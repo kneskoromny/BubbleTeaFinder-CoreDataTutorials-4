@@ -53,6 +53,27 @@ class ViewController: UIViewController {
     super.viewDidLoad()
     
     importJSONSeedDataIfNeeded()
+    
+    // ПАКЕТНОЕ ОБНОВЛЕНИЕ без fetchRequest (загрузки в память)
+    let batchUpdate = NSBatchUpdateRequest(entityName: "Venue")
+    // указываем какое свойство сущности хотим обновить и каким значением
+    batchUpdate.propertiesToUpdate =
+      [#keyPath(Venue.favorite): true]
+    // присваиваем свойству значение постоянных хранилищ контекста
+    batchUpdate.affectedStores =
+      coreDataStack.managedContext
+        .persistentStoreCoordinator?.persistentStores
+    // указываем тип возвращаемого результата
+    batchUpdate.resultType = .updatedObjectsCountResultType
+    do {
+      let batchResult =
+        try coreDataStack.managedContext.execute(batchUpdate)
+          as? NSBatchUpdateResult
+      print("Records updated \(String(describing: batchResult?.result))")
+    } catch let error as NSError {
+      print("Could not update \(error), \(error.userInfo)")
+    }
+    
     /*
     // ЗАГРУЗКА С ПОМОЩЬЮ ОБРАЗЦА ЗАПРОСА
     // в отличие от других способов получения запроса, для этого необходима managedObjectModel, чтобы далее использовать fetchRequestTemplate, если использовать сортировки и фильтры в run time тип запроса нужно менять иначе краш
