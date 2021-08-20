@@ -42,6 +42,7 @@ class ViewController: UIViewController {
   lazy var coreDataStack = CoreDataStack(modelName: "BubbleTeaFinder")
   var fetchRequest: NSFetchRequest<Venue>?
   var venues: [Venue] = []
+  var asyncFetchRequest: NSAsynchronousFetchRequest<Venue>?
   
   
   // MARK: - IBOutlets
@@ -53,8 +54,8 @@ class ViewController: UIViewController {
     
     importJSONSeedDataIfNeeded()
     /*
-    // загрузка с помощью образца запроса, в отличие от других способов получения запроса, для этого необходима managedObjectModel, чтобы далее использовать fetchRequestTemplate
-     если использовать сортировки и фильтры в run time тип запроса нужно менять иначе краш
+    // ЗАГРУЗКА С ПОМОЩЬЮ ОБРАЗЦА ЗАПРОСА
+    // в отличие от других способов получения запроса, для этого необходима managedObjectModel, чтобы далее использовать fetchRequestTemplate, если использовать сортировки и фильтры в run time тип запроса нужно менять иначе краш
     guard let model =
             coreDataStack.managedContext
             .persistentStoreCoordinator?.managedObjectModel,
@@ -66,10 +67,41 @@ class ViewController: UIViewController {
     }
     self.fetchRequest = fetchRequest
  */
-    // стандартный тип запроса для использования предикатов и сортировки в run time
+    /*
+    // СТАНДАРТНЫЙ ЗАПРОС НА ВЫБОРКУ
+    // для использования предикатов и сортировки в run time
     fetchRequest = Venue.fetchRequest()
     // проверяет и создает запрос
     fetchAndReload()
+ */
+    // АСИНХРОННЫЙ ЗАПРОС
+    // асинхронный запрос на выборку не заменяет, можно рассматривать асинхронный запрос как оболочку вокруг запроса, который у вас уже был.
+      let venueFetchRequest: NSFetchRequest<Venue> =
+        Venue.fetchRequest()
+      fetchRequest = venueFetchRequest
+    // для создания асинхронного запроса нужен обычный запрос и completion handler
+      asyncFetchRequest =
+        NSAsynchronousFetchRequest<Venue>(
+        fetchRequest: venueFetchRequest) {
+          [unowned self] (result: NSAsynchronousFetchResult) in
+          // объекты запроса содержатся в свойстве .finalResult
+          guard let venues = result.finalResult else {
+            return
+    }
+          // добавляем в массив и обновляем таблицу
+          self.venues = venues
+          self.tableView.reloadData()
+      }
+    // все равно необходимо обратиться к свойству контекста, но уже к .execute
+      do {
+        guard let asyncFetchRequest = asyncFetchRequest else {
+    return
+        }
+        try coreDataStack.managedContext.execute(asyncFetchRequest)
+        // Returns immediately, cancel here if you want
+      } catch let error as NSError {
+        print("Could not fetch \(error), \(error.userInfo)")
+    }
     
   }
   
