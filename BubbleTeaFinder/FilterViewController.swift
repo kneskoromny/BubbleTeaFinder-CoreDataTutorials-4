@@ -52,6 +52,17 @@ class FilterViewController: UITableViewController {
   @IBOutlet weak var moderateVenueCell: UITableViewCell!
   @IBOutlet weak var expensiveVenueCell: UITableViewCell!
   
+  // MARK: - Most popular section
+  @IBOutlet weak var offeringDealCell: UITableViewCell!
+  @IBOutlet weak var walkingDistanceCell: UITableViewCell!
+  @IBOutlet weak var userTipsCell: UITableViewCell!
+
+  // MARK: - Sort section
+  @IBOutlet weak var nameAZSortCell: UITableViewCell!
+  @IBOutlet weak var nameZASortCell: UITableViewCell!
+  @IBOutlet weak var distanceSortCell: UITableViewCell!
+  @IBOutlet weak var priceSortCell: UITableViewCell!
+  
   // MARK: - Properties
   var coreDataStack: CoreDataStack!
   // содержит ссылку на делегат
@@ -61,6 +72,7 @@ class FilterViewController: UITableViewController {
   // ссылка на предикат
   var selectedPredicate: NSPredicate?
   
+  // MARK: - СЕКЦИЯ PRICE
   // предикаты для ключа ценовой категории
   lazy var cheapVenuePredicate: NSPredicate = {
     return NSPredicate(format: "%K == %@",
@@ -74,6 +86,8 @@ class FilterViewController: UITableViewController {
     return NSPredicate(format: "%K == %@",
       #keyPath(Venue.priceInfo.priceCategory), "$$$")
   }()
+  
+  // MARK: - СЕКЦИЯ MOST POPULAR
   // предикат для показа мест с одной и более продажами
   lazy var offeringDealPredicate: NSPredicate = {
     return NSPredicate(format: "%K > 0",
@@ -89,17 +103,27 @@ class FilterViewController: UITableViewController {
     return NSPredicate(format: "%K > 0",
       #keyPath(Venue.stats.tipCount))
   }()
-
-  // MARK: - Most popular section
-  @IBOutlet weak var offeringDealCell: UITableViewCell!
-  @IBOutlet weak var walkingDistanceCell: UITableViewCell!
-  @IBOutlet weak var userTipsCell: UITableViewCell!
-
-  // MARK: - Sort section
-  @IBOutlet weak var nameAZSortCell: UITableViewCell!
-  @IBOutlet weak var nameZASortCell: UITableViewCell!
-  @IBOutlet weak var distanceSortCell: UITableViewCell!
-  @IBOutlet weak var priceSortCell: UITableViewCell!
+  
+  // MARK: -  СЕКЦИЯ SORT BY
+  // селекторы
+  lazy var nameSortDescriptor: NSSortDescriptor = {
+    // опциональный селектор нужен для сортировки в соответствии с нормами текущего языка
+    let compareSelector =
+      #selector(NSString.localizedStandardCompare(_:))
+    return NSSortDescriptor(key: #keyPath(Venue.name),
+                            ascending: true,
+                            selector: compareSelector)
+  }()
+  lazy var distanceSortDescriptor: NSSortDescriptor = {
+    return NSSortDescriptor(
+      key: #keyPath(Venue.location.distance),
+      ascending: true)
+  }()
+  lazy var priceSortDescriptor: NSSortDescriptor = {
+    return NSSortDescriptor(
+      key: #keyPath(Venue.priceInfo.priceCategory),
+      ascending: true)
+  }()
 
   // MARK: - View Life Cycle
   override func viewDidLoad() {
@@ -148,6 +172,20 @@ extension FilterViewController {
        selectedPredicate = walkingDistancePredicate
      case userTipsCell:
        selectedPredicate = hasUserTipsPredicate
+      
+    // Sort By section
+    case nameAZSortCell:
+      selectedSortDescriptor = nameSortDescriptor
+    case nameZASortCell:
+      // для обратной сортировки используем метод reversedSortDescriptor
+      selectedSortDescriptor =
+        nameSortDescriptor.reversedSortDescriptor
+        as? NSSortDescriptor
+    case distanceSortCell:
+      selectedSortDescriptor = distanceSortDescriptor
+    case priceSortCell:
+      selectedSortDescriptor = priceSortDescriptor
+      
      default: break
      
     }

@@ -34,6 +34,7 @@ import UIKit
 import CoreData
 
 class ViewController: UIViewController {
+  
   // MARK: - Properties
   private let filterViewControllerSegueIdentifier = "toFilterViewController"
   private let venueCellIdentifier = "VenueCell"
